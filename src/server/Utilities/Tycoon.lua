@@ -35,13 +35,33 @@ function Library.RenderButtons(Tycoon)
     for _, Button in ipairs(Tycoon.Buttons:GetChildren()) do
         local MakeVisible = Tycoon.Owner.Value.Data.Unlocked:GetAttribute(Button.Name) and true or false
 
-        Button.TitleGuiPart.GuiAttatchment.Title.Enabled = MakeVisible
+        Button.VisualButton.GuiAttatchment.Title.Enabled = MakeVisible
         Button.VisualButton.Button.Transparency = MakeVisible and 0 or 1
         Button.VisualButton.Button.Base.Transparency = MakeVisible and 0 or 1
     end
 end
 
 function Library.InitButton(Button:MeshPart) : Model
+    local IsPaid = Button:GetAttribute("Cost") ~= 0 and Button:GetAttribute("SecondCost") ~= 0
+    
+    local VisualButton = Assets.Button:Clone()  
+    VisualButton:SetPrimaryPartCFrame(Button.CFrame)
+    
+    local TitleGui = VisualButton.GuiAttatchment.Title
+    TitleGui.Paid.Visible = IsPaid
+    TitleGui.Free.Visible = not IsPaid
+
+    local TitleFrame = TitleGui.Free
+    if IsPaid then
+        TitleFrame = TitleGui.Paid
+        TitleFrame.Cost.Text = "$"..Button:GetAttribute("SecondCost")
+        if Button:GetAttribute("Cost") ~= 0 then
+            TitleFrame.Cost.Text = "$"..Button:GetAttribute("Cost")
+        end
+    end
+
+    TitleFrame.ItemName.Text = Button:GetAttribute("Label Name")
+
     Button.Touched:Connect(function(touch)
         local Owner = Button.Parent.Parent.Owner.Value
         if not Owner then return end
@@ -59,29 +79,6 @@ function Library.InitButton(Button:MeshPart) : Model
         -- Render
         Library.RenderButtons(Button.Parent.Parent)
     end)
-
-    local IsPaid = Button:GetAttribute("Cost") ~= 0 and Button:GetAttribute("SecondCost") ~= 0
-    
-    local VisualButton = Assets.Button:Clone()  
-    VisualButton:SetPrimaryPartCFrame(Button.CFrame)
-
-    local TitleGuiPart = Assets.TitleGuiPart:Clone()
-    TitleGuiPart:MoveTo(Button.Position)
-    
-    local TitleGui = TitleGuiPart.GuiAttatchment.Title
-    TitleGui.Paid.Visible = IsPaid
-    TitleGui.Free.Visible = not IsPaid
-
-    local TitleFrame = TitleGui.Free
-    if IsPaid then
-        TitleFrame = TitleGui.Paid
-        TitleFrame.Cost.Text = "$"..Button:GetAttribute("SecondCost")
-        if Button:GetAttribute("Cost") ~= 0 then
-            TitleFrame.Cost.Text = "$"..Button:GetAttribute("Cost")
-        end
-    end
-
-    TitleFrame.ItemName.Text = Button:GetAttribute("Label Name")
 
     return VisualButton
 end
