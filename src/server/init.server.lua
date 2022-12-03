@@ -1,5 +1,7 @@
-local Datastore = require(script.Parent.Datastore)
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Remotes = ReplicatedStorage.Remotes
 local Tycoons = workspace.Tycoons
 local Tycoon = Tycoons.Tycoon:Clone()
 
@@ -23,19 +25,44 @@ end
 function MainTycoon(TycoonModel)
     local Owner = TycoonModel.Owner
     local Connections = {}
+
+    local ClaimPart = TycoonModel.BaseTycoonModel._Claim
+    local ClaimPartGui = ClaimPart.Att.Gui
+
+    ---/ Functions
+    local function StartTycoon()
+        Remotes.StartCutscene:FireClient(Owner.Value) -- play cutscene
+
+    end
+
+    ---/ Connections
+    -- ClaimPart
+    Connections.ClaimConnection = ClaimPart.Touched:Connect(function(Touch)
+        if not Touch.Parent:FindFirstChild("Humanoid") then return end
+        if not Players:FindFirstChild(Touch.Parent.Name) then return end
+        if Owner.Value then return end
+        if Players:FindFirstChild(Touch.Parent.Name).OwnedTycoon.Value then return end
+
+        Owner.Value = Players:FindFirstChild(Touch.Parent.Name)
+        Owner.Value.OwnedTycoon.Value = TycoonModel
+
+        ClaimPart.Transparency = 1
+        ClaimPartGui.TextLabel.Text = Owner.Value.Name.. string.format(" ( %s )", Owner.Value.DisplayName)
+        ClaimPartGui.TextLabel.TextColor3 = Color3.new(0.725490, 1, 0.717647)
+
+        Connections.ClaimConnection:Disconnect()
+
+        StartTycoon()
+    end)
+    -- Player leaving
+    Connections.PlayerLeaving = Players.PlayerRemoving:Connect(function(Player)
+        if Player ~= Owner.Value then return end
+
+        -- do reset
+    end)
 end
 
 function PlayerAdded(Player:Player)
-    local MainCurrency = Instance.new("ObjectValue")
-    MainCurrency.Name = "MainCurrency"
-    MainCurrency.Value = 0 or Datastore.GetMainCurrency(Player)
-    MainCurrency.Parent = Player
-
-    local SecondaryCurrency = Instance.new("ObjectValue")
-    SecondaryCurrency.Name = "SecondaryCurrency"
-    SecondaryCurrency.Value = 0 or Datastore.GetSecondaryCurrency(Player)
-    SecondaryCurrency.Parent = Player
-
     local OwnedTycoon = Instance.new("ObjectValue")
     OwnedTycoon.Name = "OwnedTycoon"
     OwnedTycoon.Value = nil
@@ -43,8 +70,9 @@ function PlayerAdded(Player:Player)
     
     Player.CharacterAdded:Connect(function(Character)
         if OwnedTycoon.Value then
-            Character:MoveTo(
-                OwnedTycoon.Value.BaseTycoonModel._Spawn.Position -- move char on spawn
+            task.wait(.1)
+            Character:SetPrimaryPartCFrame(
+                OwnedTycoon.Value.BaseTycoonModel._Spawn.CFrame -- move char on spawn
             )
         end
     end)
@@ -58,4 +86,4 @@ end
 
 -- Connections
 
-game:GetService("Players").PlayerAdded:Connect(PlayerAdded)
+Players.PlayerAdded:Connect(PlayerAdded)
